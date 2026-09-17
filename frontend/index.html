@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginal — read, ask, understand</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="brand">Marginal <small>read closely</small></div>
+    <div class="topbar-right" id="topbarRight"></div>
+  </div>
+
+  <!-- AUTH SCREEN -->
+  <div class="auth-wrap" id="authScreen">
+    <div class="auth-card">
+      <div class="auth-body">
+        <div class="auth-title" id="authTitle">Welcome back</div>
+        <div class="auth-sub" id="authSub">Sign in to open your documents and pick up the conversation.</div>
+        <div class="auth-error" id="authError"></div>
+        <div class="field hidden" id="nameField">
+          <label for="nameInput">Name</label>
+          <input type="text" id="nameInput" placeholder="Your name" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="emailInput">Email</label>
+          <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="passInput">Password</label>
+          <input type="password" id="passInput" placeholder="At least 8 characters" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="authSubmit">Sign in</button>
+        <div class="auth-switch" id="authSwitch">
+          New here? <a id="switchToRegister">Create an account</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE -->
+  <div class="workspace hidden" id="workspace">
+    <div class="rail">
+      <div class="rail-header">YOUR DOCUMENTS</div>
+      <div class="doc-list" id="docList"></div>
+      <div class="upload-zone" id="uploadZone">
+        <span class="plus">＋</span>
+        Upload a document
+        <div class="upload-hint">.txt or .pdf</div>
+      </div>
+      <input type="file" id="fileInput" accept=".txt,.pdf,text/plain,application/pdf" class="hidden">
+    </div>
+
+    <div class="stage">
+      <div class="reader" id="reader">
+        <div class="empty-state" id="readerEmpty">
+          <div class="icon">📄</div>
+          <h3>Nothing open yet</h3>
+          <p>Upload a .txt or .pdf on the left. Once it's in, ask anything about it in the chat.</p>
+        </div>
+        <div id="readerContent" class="hidden reader-flex">
+          <div class="reader-header">
+            <h2 id="docTitle"></h2>
+            <div class="meta" id="docMeta"></div>
+          </div>
+          <div class="reader-body">
+            <div class="page" id="pageContent"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat">
+        <div class="chat-header">
+          <h3>Ask about this document</h3>
+          <p id="chatSub">Open a document to start asking questions</p>
+        </div>
+        <div class="chat-log" id="chatLog">
+          <div class="chat-empty" id="chatEmpty">Questions you ask will appear here, answered from what's actually on the page.</div>
+        </div>
+        <div class="chat-input">
+          <textarea id="chatInput" rows="1" placeholder="Ask a question about this document…" disabled></textarea>
+          <button class="send-btn" id="sendBtn" disabled>Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
