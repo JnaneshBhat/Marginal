@@ -1,89 +1,100 @@
-# Marginal — Document Q&A App
+# mime-db
 
-A full-stack app: upload a document, then ask questions about it in a chat that answers only from what's actually in the document.
+[![NPM Version][npm-version-image]][npm-url]
+[![NPM Downloads][npm-downloads-image]][npm-url]
+[![Node.js Version][node-image]][node-url]
+[![Build Status][ci-image]][ci-url]
+[![Coverage Status][coveralls-image]][coveralls-url]
 
-```
-document-qa-app/
-├── backend/     Node.js + Express API, SQLite database, Gemini API integration
-└── frontend/    Plain HTML/CSS/JS client (no build step needed)
-```
+This is a large database of mime types and information about them.
+It consists of a single, public JSON file and does not include any logic,
+allowing it to remain as un-opinionated as possible with an API.
+It aggregates data from the following sources:
 
-## What each part is
+- http://www.iana.org/assignments/media-types/media-types.xhtml
+- http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types
+- http://hg.nginx.org/nginx/raw-file/default/conf/mime.types
 
-- **frontend/** — this is the actual "frontend": the web page your browser loads and displays. It has no server logic of its own — it just calls the backend over HTTP.
-- **backend/** — this is the "backend": a Node.js server that handles registration/login, stores documents, and talks to Google's Gemini API to answer questions. It's the only place that holds secrets (like your API key) and does real work.
-- **database** — SQLite, a single file (`backend/data/app.db`) created automatically the first time you run the server. No separate database server to install.
-
-## 1. Requirements
-
-- [Node.js](https://nodejs.org) version 22.5 or later (check with `node -v`) — this app uses Node's built-in SQLite support, so no extra database software or build tools are needed
-- A **free** Google Gemini API key — no credit card needed:
-  1. Go to https://aistudio.google.com
-  2. Sign in with any Google account
-  3. Click **"Get API key"** → **"Create API key"**
-  4. Copy the key (starts with `AIza...`)
-
-## 2. Set up the backend
+## Installation
 
 ```bash
-cd backend
-npm install
-cp .env.example .env
+npm install mime-db
 ```
 
-Open `.env` and fill in:
-- `JWT_SECRET` — any long random string (used to sign login sessions). Generate one with:
-  ```bash
-  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-  ```
-- `GEMINI_API_KEY` — the key you copied from Google AI Studio
-- `GEMINI_MODEL` — leave as `gemini-2.5-flash` (fast and free-tier eligible)
+### Database Download
 
-Start the server:
-
-```bash
-npm start
-```
-
-You should see: `Marginal backend running on http://localhost:5000`
-
-## 3. Run the frontend
-
-The frontend is static files — no build step. Simplest option, from the `frontend/` folder:
-
-```bash
-cd frontend
-npx serve .
-```
-
-(or just open `frontend/index.html` directly in your browser — it will call the backend at `http://localhost:5000/api` automatically).
-
-Then visit the URL it gives you (e.g. `http://localhost:3000`), create an account, upload a `.txt` or `.pdf`, and start asking questions.
-
-## 4. How it fits together
-
-1. **Register/Login** (`frontend` → `POST /api/auth/register` or `/login`) — the backend hashes passwords with bcrypt and returns a signed JWT, which the frontend stores and sends with every request afterward.
-2. **Upload** (`POST /api/documents`) — the backend extracts text from `.pdf` (via `pdf-parse`) or reads `.txt` directly, and saves it in the `documents` table tied to your account.
-3. **Ask a question** (`POST /api/documents/:id/messages`) — the backend loads that document's text, sends it as context to the Gemini API along with your question and recent chat history, saves both messages to the `messages` table, and returns the answer.
-
-## Note on the free tier
-
-The Gemini free tier is genuinely free (no card, no expiration) but it's rate-limited and meant for prototyping/low-volume use — don't feed it anything highly sensitive, since free-tier inputs may be used by Google to improve their models. If you outgrow it, Google's paid tier removes that data-use clause and raises the limits.
-
-## 5. Database schema
+If you're crazy enough to use this in the browser, you can just grab the
+JSON file using [jsDelivr](https://www.jsdelivr.com/). It is recommended to
+replace `master` with [a release tag](https://github.com/jshttp/mime-db/tags)
+as the JSON format may change in the future.
 
 ```
-users        id, name, email, password_hash, created_at
-documents    id, user_id, name, content, word_count, uploaded_at
-messages     id, document_id, role, content, created_at
+https://cdn.jsdelivr.net/gh/jshttp/mime-db@master/db.json
 ```
 
-Everything lives in `backend/data/app.db`. Delete that file to reset the whole app.
+## Usage
 
-## 6. Notes on going to production
+```js
+var db = require('mime-db')
 
-This is set up to run comfortably on your own machine. Before deploying it publicly, you'd want to:
-- Serve the frontend and backend from the same origin (or configure CORS more tightly)
-- Put the SQLite file on persistent storage, or switch to Postgres for multiple concurrent users
-- Add rate limiting on `/api/auth` and `/api/documents/:id/messages`
-- Use HTTPS and a proper secrets manager for `JWT_SECRET` / `GEMINI_API_KEY`
+// grab data on .js files
+var data = db['application/javascript']
+```
+
+## Data Structure
+
+The JSON file is a map lookup for lowercased mime types.
+Each mime type has the following properties:
+
+- `.source` - where the mime type is defined.
+    If not set, it's probably a custom media type.
+    - `apache` - [Apache common media types](http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types)
+    - `iana` - [IANA-defined media types](http://www.iana.org/assignments/media-types/media-types.xhtml)
+    - `nginx` - [nginx media types](http://hg.nginx.org/nginx/raw-file/default/conf/mime.types)
+- `.extensions[]` - known extensions associated with this mime type.
+- `.compressible` - whether a file of this type can be gzipped.
+- `.charset` - the default charset associated with this type, if any.
+
+If unknown, every property could be `undefined`.
+
+## Contributing
+
+To edit the database, only make PRs against `src/custom-types.json` or
+`src/custom-suffix.json`.
+
+The `src/custom-types.json` file is a JSON object with the MIME type as the
+keys and the values being an object with the following keys:
+
+- `compressible` - leave out if you don't know, otherwise `true`/`false` to
+  indicate whether the data represented by the type is typically compressible.
+- `extensions` - include an array of file extensions that are associated with
+  the type.
+- `notes` - human-readable notes about the type, typically what the type is.
+- `sources` - include an array of URLs of where the MIME type and the associated
+  extensions are sourced from. This needs to be a [primary source](https://en.wikipedia.org/wiki/Primary_source);
+  links to type aggregating sites and Wikipedia are _not acceptable_.
+
+To update the build, run `npm run build`.
+
+### Adding Custom Media Types
+
+The best way to get new media types included in this library is to register
+them with the IANA. The community registration procedure is outlined in
+[RFC 6838 section 5](http://tools.ietf.org/html/rfc6838#section-5). Types
+registered with the IANA are automatically pulled into this library.
+
+If that is not possible / feasible, they can be added directly here as a
+"custom" type. To do this, it is required to have a primary source that
+definitively lists the media type. If an extension is going to be listed as
+associateed with this media type, the source must definitively link the
+media type and extension as well.
+
+[ci-image]: https://badgen.net/github/checks/jshttp/mime-db/master?label=ci
+[ci-url]: https://github.com/jshttp/mime-db/actions?query=workflow%3Aci
+[coveralls-image]: https://badgen.net/coveralls/c/github/jshttp/mime-db/master
+[coveralls-url]: https://coveralls.io/r/jshttp/mime-db?branch=master
+[node-image]: https://badgen.net/npm/node/mime-db
+[node-url]: https://nodejs.org/en/download
+[npm-downloads-image]: https://badgen.net/npm/dm/mime-db
+[npm-url]: https://npmjs.org/package/mime-db
+[npm-version-image]: https://badgen.net/npm/v/mime-db
